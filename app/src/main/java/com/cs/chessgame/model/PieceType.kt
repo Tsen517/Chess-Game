@@ -1,11 +1,10 @@
 package com.cs.chessgame.model
 
-
 enum class PieceType(val spriteCol: Int) {
-    KING(0),
-    QUEEN(1),
-    ROOK(2),
-    BISHOP(3),
-    KNIGHT(4),
-    PAWN(5)
+    PAWN(0),
+    KNIGHT(1),
+    QUEEN(2),
+    KING(3),
+    BISHOP(4),
+    ROOK(5)
 }

@@ -1,6 +1,8 @@
 package com.cs.chessgame.ui.component
 
+import android.R
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,10 +18,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.cs.chessgame.model.GameState
+import com.cs.chessgame.model.Move
 import com.cs.chessgame.utils.SpriteSheetParser
 import com.cs.chessgame.viewmodel.GameViewModel
 
@@ -29,20 +34,95 @@ fun ChessBoardCanvas(
     modifier: Modifier = Modifier
 ) {
     val gameState by viewModel.gameState.collectAsState()
+    val selectedSquare by viewModel.selectedSquare.collectAsState()
+    val validMoves by viewModel.validMoves.collectAsState()
 
     Canvas(
         modifier = modifier
             .fillMaxWidth()
             .aspectRatio(1f)
             .padding(12.dp)
+            //點擊偵測：像素座標轉換成格子
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val cellSize = size.width / 8f
+                    val col = (offset.x / cellSize).toInt().coerceIn(0, 7)
+                    val row = (offset.y / cellSize).toInt().coerceIn(0, 7)
+                    viewModel.onSquareClick(row, col)
+                }
+            }
     ) {
         val cellSize = size.width / 8f
 
         // 1. 繪製棋盤底色
         drawBoard(cellSize)
 
-        // 2. 繪製所有棋子
+        // 2. 選取框（黃色，畫在棋子之下以免蓋住棋子邊緣）
+        selectedSquare?.let { (selRow, selCol) ->
+            drawSelectedSquare(selRow, selCol, cellSize)
+        }
+
+        // 3. 合法移動提示點（綠色半透明圓）
+        drawValidMoveHints(validMoves, gameState, cellSize)
+
+        // 4. 繪製所有棋子(最上層)
         drawAllPieces(gameState, cellSize)
+    }
+}
+
+// ─────────────────────────────────────────────────────────
+// 選取框：黃色實心背景 + 深色邊框，不遮棋子
+// ─────────────────────────────────────────────────────────
+private fun DrawScope.drawSelectedSquare(row: Int, col: Int, cellSize: Float) {
+    val topLeft = Offset(col*cellSize, row*cellSize)
+    val size = Size(cellSize,cellSize)
+
+    //半透明黃色填滿以示選取區塊
+    drawRect(
+        color = Color(0xAA6F669),
+        topLeft = topLeft,
+        size = size
+    )
+    //黑色邊框
+    drawRect(
+        color = Color(0xFFF6F600),
+        topLeft = topLeft,
+        size = size,
+        style = Stroke(width = 3.dp.toPx())
+    )
+}
+
+// ─────────────────────────────────────────────────────────
+// 合法移動提示：
+//   空格 → 小綠點（置中）
+//   有敵方棋子 → 綠色空心環（表示可吃）
+// ─────────────────────────────────────────────────────────
+private  fun DrawScope.drawValidMoveHints(
+    moves:List<Move>,
+    gameState: GameState,
+    cellSize: Float
+){
+    moves.forEach { move ->
+        val cx = move.toCol * cellSize + cellSize / 2f
+        val cy = move.toRow * cellSize + cellSize / 2f
+        val hasEnemy = gameState.board[move.toRow][move.toCol] != null
+
+        if (hasEnemy){
+            //空心環，表示能吃子
+            drawCircle(
+                color = Color(0x9900A000),
+                radius = cellSize *0.46f,
+                center = Offset(cx,cy),
+                style = Stroke(width = 4.dp.toPx())
+            )
+        }else{
+            // 半透明綠色填滿整格，表示可移動
+            drawRect(
+                color = Color(0x4000C853),
+                topLeft = Offset(x = move.toCol * cellSize, y = move.toRow * cellSize),
+                size = Size(cellSize, cellSize)
+            )
+        }
     }
 }
 

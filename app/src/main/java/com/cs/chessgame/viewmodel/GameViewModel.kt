@@ -7,6 +7,7 @@ import com.cs.chessgame.model.Move
 import com.cs.chessgame.model.Piece
 import com.cs.chessgame.model.PieceColor
 import com.cs.chessgame.model.PieceType
+import com.cs.chessgame.utils.CheckDetector
 import com.cs.chessgame.utils.MoveValidator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -57,6 +58,7 @@ class GameViewModel : ViewModel() {
         }
         _selectedSquare.value = row to col
         _vaildMoves.value = MoveValidator.getValidMoves(piece,state.board)
+
     }
     // ─────────────────────────────────────────────
     // 執行移動，更新 board + 換手
@@ -73,10 +75,17 @@ class GameViewModel : ViewModel() {
         board[move.fromRow][move.fromCol] = null
         board[move.toRow][move.toCol] = updatedPiece
 
+        val nextTurn = state.currentTurn.opposite()
+        val newBoard = board.map{ it.toList() }
+        val inCheck = CheckDetector.isInCheck(newBoard,nextTurn)
+        val inCheckmate = CheckDetector.isCheckmate(newBoard,nextTurn)
+
         _gameState.value = state.copy(
-            board = board.map{it.toList()},
-            currentTurn = state.currentTurn.opposite(),
-            moveHistory = state.moveHistory + move
+            board = newBoard,
+            currentTurn = nextTurn,
+            moveHistory = state.moveHistory + move,
+            isCheck = inCheck,
+            isCheckmate = inCheckmate
         )
         clearSelection()
     }

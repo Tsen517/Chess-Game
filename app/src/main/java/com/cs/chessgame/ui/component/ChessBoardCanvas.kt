@@ -57,15 +57,25 @@ fun ChessBoardCanvas(
         // 1. 繪製棋盤底色
         drawBoard(cellSize)
 
-        // 2. 選取框（黃色，畫在棋子之下以免蓋住棋子邊緣）
+        // 2. 將軍紅框
+        if (gameState.isCheck){
+            val king = gameState.board.flatten().filterNotNull()
+                .first{ it.type == com.cs.chessgame.model.PieceType.KING && it.color == gameState.currentTurn }
+            drawRect(
+                color = Color(0x99FF1744),
+                topLeft = Offset(king.col * cellSize,king.row*cellSize),
+                size = Size(cellSize,cellSize)
+            )
+        }
+        // 3. 選取框（黃色，畫在棋子之下以免蓋住棋子邊緣）
         selectedSquare?.let { (selRow, selCol) ->
             drawSelectedSquare(selRow, selCol, cellSize)
         }
 
-        // 3. 合法移動提示點（綠色半透明圓）
+        // 4. 合法移動提示點（綠色半透明圓）
         drawValidMoveHints(validMoves, gameState, cellSize)
 
-        // 4. 繪製所有棋子(最上層)
+        // 5. 繪製所有棋子(最上層)
         drawAllPieces(gameState, cellSize)
     }
 }
@@ -79,7 +89,7 @@ private fun DrawScope.drawSelectedSquare(row: Int, col: Int, cellSize: Float) {
 
     //半透明黃色填滿以示選取區塊
     drawRect(
-        color = Color(0xAA6F669),
+        color = Color(0xAAFFFF00),
         topLeft = topLeft,
         size = size
     )

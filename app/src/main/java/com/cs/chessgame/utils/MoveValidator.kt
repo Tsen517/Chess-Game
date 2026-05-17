@@ -7,7 +7,12 @@ import com.cs.chessgame.model.PieceType
 
 object MoveValidator {
 
-    fun getValidMoves(piece: Piece, board: List<List<Piece?>>): List<Move> {
+    /* 對外入口：幾何合法 ＋ 將軍過濾 */
+    fun getValidMoves(piece: Piece,board: List<List<Piece?>>):List<Move> =
+        CheckDetector.filterLegalMoves(piece,board)
+
+    /*  純幾何移動（不含將軍過濾），供 CheckDetector 內部使用 */
+    fun getRawMoves(piece: Piece, board: List<List<Piece?>>): List<Move> {
         return when (piece.type) {
             PieceType.PAWN   -> PawnMoves(piece, board)
             PieceType.ROOK   -> RookMoves(piece, board)
@@ -62,32 +67,8 @@ object MoveValidator {
     // ──────────────────────────────────────────
     private fun RookMoves(piece: Piece, board: List<List<Piece?>>): List<Move> {
     val moves = mutableListOf<Move>()
-    val directions = listOf(
-        -1 to 0,  //上
-        1 to 0,   //下
-        0 to -1,  //左
-        0 to 1,   //右
-    )
-    for ((dr,dc)in directions){
-        var r = piece.row + dr
-        var c = piece.col + dc
-
-        while (r in 0..7 && c in 0..7){
-            val target = board[r][c]
-            when{
-                target == null ->
-                    moves += Move(piece.row, piece.col, r, c)
-                target.color != piece.color -> {
-                    moves += Move(piece.row, piece.col, r, c, capturedPiece = target)
-                    return moves
-                }
-                else -> return moves
-            }
-            r += dr
-            c += dc
-        }
-    }
-        return moves
+    val directions = listOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1,)
+        return slidingMoves(piece, board, directions)
     }
     // ─────────────────────────────────────────────
     // KNIGHT
@@ -140,7 +121,6 @@ object MoveValidator {
             .map    { (r, c)   ->
                 Move(piece.row, piece.col, r, c, capturedPiece = board[r][c])
             }
-        // Day 6 補：過濾移動後仍被將軍的格子
     }
     // ── 滑動輔助（Bishop / Queen 共用，與 getRookMoves 邏輯一致）────────
     private fun slidingMoves(

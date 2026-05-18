@@ -62,4 +62,12 @@ object CheckDetector {
             .filter { it.color == color }
             .all { filterLegalMoves(it, board).isEmpty() }
     }
+    fun isStalemate(board: List<List<Piece?>>,color: PieceColor): Boolean{
+        if(isInCheck(board,color))return false
+        return board.flatten()
+            .filterNotNull()
+            .filter { it.color == color }
+            .flatMap { MoveValidator.getValidMoves(it,board) }
+            .isEmpty()
+    }
 }

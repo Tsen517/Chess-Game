@@ -28,6 +28,7 @@ class GameViewModel : ViewModel() {
     // 點擊格子邏輯 //
     fun onSquareClick(row: Int, col: Int){
         val state = _gameState.value
+        if (state.isCheckmate || state.isStalemate) return
         val selected = _selectedSquare.value
         if (selected == null){
             selectPiece(row, col,state)
@@ -79,14 +80,20 @@ class GameViewModel : ViewModel() {
         val newBoard = board.map{ it.toList() }
         val inCheck = CheckDetector.isInCheck(newBoard,nextTurn)
         val inCheckmate = CheckDetector.isCheckmate(newBoard,nextTurn)
+        val isStalemate = CheckDetector.isStalemate(newBoard,nextTurn)
 
         _gameState.value = state.copy(
             board = newBoard,
             currentTurn = nextTurn,
             moveHistory = state.moveHistory + move,
             isCheck = inCheck,
-            isCheckmate = inCheckmate
+            isCheckmate = inCheckmate,
+            isStalemate = isStalemate
         )
+        clearSelection()
+    }
+    fun resetGame(){
+        _gameState.value = GameState(board= initialBoard())
         clearSelection()
     }
     // ─────────────────────────────────────────────

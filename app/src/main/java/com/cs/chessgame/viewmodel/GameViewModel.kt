@@ -2,6 +2,7 @@ package com.cs.chessgame.viewmodel
 
 import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.cs.chessgame.model.GameState
 import com.cs.chessgame.model.Move
 import com.cs.chessgame.model.Piece
@@ -9,9 +10,12 @@ import com.cs.chessgame.model.PieceColor
 import com.cs.chessgame.model.PieceType
 import com.cs.chessgame.utils.CheckDetector
 import com.cs.chessgame.utils.MoveValidator
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class GameViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameState(initialBoard()))
@@ -24,6 +28,34 @@ class GameViewModel : ViewModel() {
     /*目前合法移動清單（給UI畫提示點）*/
     private val _vaildMoves = MutableStateFlow<List<Move>>(emptyList())
     val validMoves: StateFlow<List<Move>> = _vaildMoves.asStateFlow()
+
+    // 新增計時器
+    private var timerJob: Job?=null
+    init {
+        startTimer()
+    }
+    //計時器：每秒倒數目前回合的玩家
+    private fun startTimer(){
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
+            while (true){
+                delay(1000L)
+                val state = _gameState.value
+                if (state.isCheckmate || state.isStalemate) break
+
+                val isWhiteTurn = state.currentTurn == PieceColor.WHITE
+                val newWhite = if(isWhiteTurn)(state.whiteTimeSeconds -1).coerceAtLeast(0)
+                               else state.whiteTimeSeconds
+                val newBlack = if(!isWhiteTurn)(state.blackTimeSeconds -1).coerceAtLeast(0)
+                               else state.blackTimeSeconds
+
+                _gameState.value = state.copy(
+                    whiteTimeSeconds = newWhite,
+                    blackTimeSeconds = newBlack
+                )
+            }
+        }
+    }
 
     // 點擊格子邏輯 //
     fun onSquareClick(row: Int, col: Int){
@@ -92,9 +124,46 @@ class GameViewModel : ViewModel() {
         )
         clearSelection()
     }
+    // ─────────────────────────────────────────────
+    // 悔棋：還原上一步
+    // ─────────────────────────────────────────────
+    fun undoMove(){
+        val state = _gameState.value
+        if (state.moveHistory.isEmpty()) return
+
+        val lastMove = state.moveHistory.last()
+        val board = state.board.map { it.toMutableStateList() } .toMutableStateList()
+
+        val movedPiece = board[lastMove.toRow][lastMove.toCol]!!
+        board[lastMove.toRow][lastMove.toCol] = lastMove.capturedPiece
+        board[lastMove.fromRow][lastMove.fromCol] = movedPiece.copy(
+            row = lastMove.fromRow,
+            col = lastMove.fromCol,
+            hasMoved = lastMove.fromRow != (if (movedPiece.color == PieceColor.WHITE)6 else 1)
+        )
+
+        val newHistory = state.moveHistory.dropLast(1)
+        val newBoard = board.map{it.toList()}
+        val prevTurn = state.currentTurn.opposite()
+        val inCheck = CheckDetector.isInCheck(newBoard,prevTurn)
+
+        _gameState.value = state.copy(
+            board = newBoard,
+            currentTurn = prevTurn,
+            moveHistory = newHistory,
+            isCheck = inCheck,
+            isCheckmate = false,
+            isStalemate = false
+        )
+        clearSelection()
+    }
+    // ─────────────────────────────────────────────
+    // 重新開始
+    // ─────────────────────────────────────────────
     fun resetGame(){
         _gameState.value = GameState(board= initialBoard())
         clearSelection()
+        startTimer()
     }
     // ─────────────────────────────────────────────
     // 清除選取狀態
@@ -104,7 +173,9 @@ class GameViewModel : ViewModel() {
         _vaildMoves.value = emptyList()
     }
 }
-
+// ─────────────────────────────────────────────
+// 初始棋盤
+// ─────────────────────────────────────────────
 fun initialBoard(): List<List<Piece?>>{
     val board = Array(8){arrayOfNulls<Piece>(8)}
 
@@ -127,4 +198,12 @@ fun initialBoard(): List<List<Piece?>>{
         board[6][col] = Piece(PieceType.PAWN, PieceColor.WHITE, 6, col)  // 白兵
     }
     return board.map { it.toList() }
+}
+// ─────────────────────────────────────────────
+// 時間格式化工具
+// ─────────────────────────────────────────────
+fun formatTime(seconds:Int): String{
+    val m = seconds / 60
+    val s = seconds % 60
+    return "%02d%02d".format(m,s)
 }

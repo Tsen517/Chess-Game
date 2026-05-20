@@ -33,11 +33,14 @@ import com.cs.chessgame.ui.component.ChessBoardCanvas
 import com.cs.chessgame.ui.component.GameOverlay
 import com.cs.chessgame.viewmodel.GameViewModel
 import com.cs.chessgame.viewmodel.formatTime
+import com.cs.chessgame.model.PieceType
+import com.cs.chessgame.ui.component.PromotionDialog
 
 
 @Composable
 fun GameScreen(viewModel: GameViewModel = viewModel()) {
     val gameState by viewModel.gameState.collectAsState()
+    val pendingPromotion by viewModel.pendingPromotion.collectAsState()
 
     Column(
         modifier = Modifier
@@ -69,6 +72,12 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
                 currentTurn = gameState.currentTurn,
                 onRestart = { viewModel.resetGame() }
             )
+            pendingPromotion?.let { (row, _) ->
+                PromotionDialog(
+                    color = gameState.currentTurn,
+                    onPieceSelected = { viewModel.onPromotionSelected(it) }
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))

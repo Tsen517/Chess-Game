@@ -29,6 +29,9 @@ class GameViewModel : ViewModel() {
     private val _vaildMoves = MutableStateFlow<List<Move>>(emptyList())
     val validMoves: StateFlow<List<Move>> = _vaildMoves.asStateFlow()
 
+    private val _pendingPromotion = MutableStateFlow<Pair<Int, Int>?>(null)
+    val pendingPromotion:StateFlow<Pair<Int, Int>?> = _pendingPromotion.asStateFlow()
+
     // 新增計時器
     private var timerJob: Job?=null
     init {
@@ -59,6 +62,7 @@ class GameViewModel : ViewModel() {
 
     // 點擊格子邏輯 //
     fun onSquareClick(row: Int, col: Int){
+        if (_pendingPromotion.value != null) return
         val state = _gameState.value
         if (state.isCheckmate || state.isStalemate) return
         val selected = _selectedSquare.value
@@ -108,8 +112,18 @@ class GameViewModel : ViewModel() {
         board[move.fromRow][move.fromCol] = null
         board[move.toRow][move.toCol] = updatedPiece
 
-        val nextTurn = state.currentTurn.opposite()
         val newBoard = board.map{ it.toList() }
+        if (move.isPromotion){
+            _gameState.value = state.copy(
+                board = newBoard,
+                moveHistory = state.moveHistory + move
+            )
+            _pendingPromotion.value = move.toRow to move.toCol
+            clearSelection()
+            return
+        }
+
+        val nextTurn = state.currentTurn.opposite()
         val inCheck = CheckDetector.isInCheck(newBoard,nextTurn)
         val inCheckmate = CheckDetector.isCheckmate(newBoard,nextTurn)
         val isStalemate = CheckDetector.isStalemate(newBoard,nextTurn)
@@ -124,10 +138,32 @@ class GameViewModel : ViewModel() {
         )
         clearSelection()
     }
+    // 升變完成：將兵替換為玩家選擇的棋子，並換手、更新將軍狀態
+    fun onPromotionSelected(pieceType: PieceType) {
+        val state = _gameState.value
+        val (row, col) = _pendingPromotion.value ?: return
+        val pawn = state.board[row][col] ?: return
+
+        val board = state.board.map { it.toMutableStateList() }.toMutableStateList()
+        board[row][col] = pawn.copy(type = pieceType)
+        val newBoard = board.map { it.toList() }
+
+        val nextTurn = state.currentTurn.opposite()
+        _gameState.value = state.copy(
+            board = newBoard,
+            currentTurn = nextTurn,
+            isCheck = CheckDetector.isInCheck(newBoard, nextTurn),
+            isCheckmate = CheckDetector.isCheckmate(newBoard, nextTurn),
+            isStalemate = CheckDetector.isStalemate(newBoard, nextTurn)
+        )
+        _pendingPromotion.value = null
+        clearSelection()
+    }
     // ─────────────────────────────────────────────
     // 悔棋：還原上一步
     // ─────────────────────────────────────────────
     fun undoMove(){
+        _pendingPromotion.value = null
         val state = _gameState.value
         if (state.moveHistory.isEmpty()) return
 
@@ -197,13 +233,19 @@ fun initialBoard(): List<List<Piece?>>{
         board[1][col] = Piece(PieceType.PAWN, PieceColor.BLACK, 1, col)  // 黑兵
         board[6][col] = Piece(PieceType.PAWN, PieceColor.WHITE, 6, col)  // 白兵
     }
+
+    // ↓ 測試用：把 col=4 的白兵移到 row=1（距底行一步）
+    board[6][4] = null
+    board[1][4] = Piece(PieceType.PAWN, PieceColor.WHITE, 1, 4, hasMoved = true)
+
     return board.map { it.toList() }
 }
+
 // ─────────────────────────────────────────────
 // 時間格式化工具
 // ─────────────────────────────────────────────
 fun formatTime(seconds:Int): String{
     val m = seconds / 60
     val s = seconds % 60
-    return "%02d%02d".format(m,s)
+    return "%02d:%02d".format(m,s)
 }

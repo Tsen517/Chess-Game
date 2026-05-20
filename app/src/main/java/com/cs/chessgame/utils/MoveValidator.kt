@@ -31,6 +31,7 @@ object MoveValidator {
         val moves = mutableListOf<Move>()
         val dir    = if (piece.color == PieceColor.WHITE) -1 else 1   // 前進方向
         val startRow = if (piece.color == PieceColor.WHITE) 6 else 1   // 初始行
+        val promotionRow = if (piece.color == PieceColor.WHITE) 0 else 7
 
         val r = piece.row
         val c = piece.col
@@ -38,7 +39,7 @@ object MoveValidator {
         // 1. 前進 1 格（目標格必須空）
         val oneStep = r + dir
         if (oneStep in 0..7 && board[oneStep][c] == null) {
-            moves += Move(r, c, oneStep, c)
+            moves += Move(r, c, oneStep, c, isPromotion = oneStep == promotionRow)
 
             // 2. 前進 2 格（尚未移動 + 兩格都空）
             val twoStep = r + dir * 2
@@ -53,7 +54,9 @@ object MoveValidator {
             if (oneStep in 0..7 && nc in 0..7) {
                 val target = board[oneStep][nc]
                 if (target != null && target.color != piece.color) {
-                    moves += Move(r, c, oneStep, nc, capturedPiece = target)
+                    moves += Move(r, c, oneStep, nc,
+                        capturedPiece = target,
+                        isPromotion = oneStep == promotionRow)
                 }
             }
         }

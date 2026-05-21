@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.cs.chessgame.ui.screen.GameScreen
 import com.cs.chessgame.ui.theme.ChessGameTheme
 import com.cs.chessgame.utils.SpriteSheetParser
+import com.cs.chessgame.ui.theme.BoardTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -14,7 +15,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SpriteSheetParser.init(this)
         setContent {
-            ChessGameTheme {
+            ChessGameTheme(boardTheme = BoardTheme.CLASSIC) {
                 GameScreen()
             }
         }

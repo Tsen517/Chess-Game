@@ -34,7 +34,10 @@ import com.cs.chessgame.ui.component.GameOverlay
 import com.cs.chessgame.viewmodel.GameViewModel
 import com.cs.chessgame.viewmodel.formatTime
 import com.cs.chessgame.ui.component.PromotionDialog
-
+import com.cs.chessgame.ui.theme.LocalBoardColors
+import com.cs.chessgame.ui.theme.AppBackground
+import androidx.compose.foundation.border
+import com.cs.chessgame.ui.theme.PrimaryAccent
 
 @Composable
 fun GameScreen(viewModel: GameViewModel = viewModel()) {
@@ -45,7 +48,7 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .background(Color(0xFF1E1E2E)),
+            .background(AppBackground),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -121,13 +124,19 @@ fun TimerRow(
     timeSeconds:Int,
     isActive: Boolean
 ){
+    val boardColors = LocalBoardColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(12.dp))
+            .border(
+                width = if (isActive) 1.dp else 0.dp,
+                color = if (isActive)PrimaryAccent else Color.Transparent,
+                shape = RoundedCornerShape(12.dp)
+            )
             .background(
-                if (isActive) Color(0XFF3A3A5C) else Color(0xFF2A2A3C)
+                if (isActive) boardColors.surface else boardColors.surface.copy(alpha = 0.5f)
             )
             .padding(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -136,16 +145,16 @@ fun TimerRow(
         Text(
             text = label,
             fontSize = 16.sp,
-            color = if (isActive)Color.White else Color(0xFF8888AA)
+            color = if (isActive) boardColors.onSurface else boardColors.onSurface.copy(alpha = 0.7f)
         )
         Text(
             text = formatTime(timeSeconds),
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = when{
-                timeSeconds <= 30 -> Color(0xFFFF5252)
-                isActive          -> Color.White
-                else              -> Color(0xFF8888AA)
+                timeSeconds <= 30 -> boardColors.check
+                isActive          -> boardColors.onSurface
+                else              -> boardColors.onSurface.copy(alpha = 0.7f)
             }
         )
     }

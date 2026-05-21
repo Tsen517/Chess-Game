@@ -39,12 +39,13 @@ Kotlin + Jetpack Compose · 雙人本地對戰 · 3 週衝刺專題
 - 悔棋（Undo）
 - 計時器倒數 UI（每方 10 分鐘）
 - 兵升變（Pawn Promotion）
-
-### 🔲 待完成
-
 - 王車易位（Castling）
 - 過路兵（En Passant）
 - 超時判負
+
+### 🔲 待完成
+
+
 - 主選單畫面
 - 音效
 - 棋譜顯示

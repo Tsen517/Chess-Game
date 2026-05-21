@@ -27,8 +27,6 @@ Kotlin + Jetpack Compose · 雙人本地對戰 · 3 週衝刺專題
 
 ## 功能進度
 
-### ✅ 已完成
-
 - 棋盤渲染（8×8 Canvas 繪製）
 - 棋子圖示（PNG Sprite Sheet 載入與裁切）
 - 六種棋子合法走法（Pawn / Rook / Knight / Bishop / Queen / King）
@@ -42,14 +40,8 @@ Kotlin + Jetpack Compose · 雙人本地對戰 · 3 週衝刺專題
 - 王車易位（Castling）
 - 過路兵（En Passant）
 - 超時判負
+- 主題視覺（雙色系棋盤主題切換、深色極簡 / 經典木質棕）
 
-### 🔲 待完成
-
-
-- 主選單畫面
-- 音效
-- 棋譜顯示
-- 單元測試
 
 ---
 
@@ -71,6 +63,7 @@ com.cs.chessgame
 │   ├── screen/
 │   │   └── GameScreen.kt
 │   └── theme/
+│       ├── BoardTheme.kt
 │       ├── Color.kt
 │       ├── Theme.kt
 │       └── Type.kt

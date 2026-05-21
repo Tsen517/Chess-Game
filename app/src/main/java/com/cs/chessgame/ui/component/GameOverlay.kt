@@ -22,10 +22,13 @@ import androidx.compose.material3.Text
 fun GameOverlay(
     isCheckmate: Boolean,
     isStalemate: Boolean,
+    isTimeout: Boolean,
     currentTurn: PieceColor, // applyMove 後已換手：此為敗方
     onRestart: () -> Unit
 ){
-    if (!isCheckmate && !isStalemate) return
+    if (!isCheckmate && !isStalemate && !isTimeout) return
+
+    val loser = currentTurn
     val winner = currentTurn.opposite()
 
     Box(
@@ -46,11 +49,19 @@ fun GameOverlay(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = if (isCheckmate) "♔" else "🤝",
+                    text = when {
+                        isCheckmate -> "♔"
+                        isTimeout   -> "⏰"
+                        else        -> "🤝"
+                    },
                     fontSize = 56.sp
                 )
                 Text(
-                    text = if (isCheckmate) "將死" else "和局",
+                    text = when {
+                        isCheckmate -> "將死"
+                        isTimeout   -> "超時"
+                        else        -> "和局"
+                    },
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -58,6 +69,7 @@ fun GameOverlay(
                 Text(
                     text = when {
                         isCheckmate -> "${if (winner == PieceColor.WHITE) "白方" else "黑方"} 獲勝"
+                        isTimeout   -> "${if (loser == PieceColor.WHITE) "白方" else "黑方"} 超時，${if (winner == PieceColor.WHITE) "白方" else "黑方"} 獲勝"
                         else        -> "雙方平手"
                     },
                     fontSize = 18.sp,

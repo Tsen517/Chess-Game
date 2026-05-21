@@ -6,5 +6,7 @@ data class Move(
     val toRow: Int,
     val toCol: Int,
     val capturedPiece: Piece? = null,
-    val isPromotion: Boolean = false
+    val isPromotion: Boolean = false,
+    val isCastling: Boolean = false,
+    val isEnPassant: Boolean = false
 )

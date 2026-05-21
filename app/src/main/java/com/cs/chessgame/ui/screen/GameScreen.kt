@@ -33,7 +33,6 @@ import com.cs.chessgame.ui.component.ChessBoardCanvas
 import com.cs.chessgame.ui.component.GameOverlay
 import com.cs.chessgame.viewmodel.GameViewModel
 import com.cs.chessgame.viewmodel.formatTime
-import com.cs.chessgame.model.PieceType
 import com.cs.chessgame.ui.component.PromotionDialog
 
 
@@ -69,6 +68,7 @@ fun GameScreen(viewModel: GameViewModel = viewModel()) {
             GameOverlay(
                 isCheckmate = gameState.isCheckmate,
                 isStalemate = gameState.isStalemate,
+                isTimeout = gameState.isTimeout,
                 currentTurn = gameState.currentTurn,
                 onRestart = { viewModel.resetGame() }
             )

@@ -52,10 +52,13 @@ class GameViewModel : ViewModel() {
                 val newBlack = if(!isWhiteTurn)(state.blackTimeSeconds -1).coerceAtLeast(0)
                                else state.blackTimeSeconds
 
+                val timeout = newWhite == 0 || newBlack == 0
                 _gameState.value = state.copy(
                     whiteTimeSeconds = newWhite,
-                    blackTimeSeconds = newBlack
+                    blackTimeSeconds = newBlack,
+                    isTimeout = timeout
                 )
+                if (timeout) break
             }
         }
     }
@@ -64,7 +67,7 @@ class GameViewModel : ViewModel() {
     fun onSquareClick(row: Int, col: Int){
         if (_pendingPromotion.value != null) return
         val state = _gameState.value
-        if (state.isCheckmate || state.isStalemate) return
+        if (state.isCheckmate || state.isStalemate || state.isTimeout) return
         val selected = _selectedSquare.value
         if (selected == null){
             selectPiece(row, col,state)
@@ -94,25 +97,17 @@ class GameViewModel : ViewModel() {
             return
         }
         _selectedSquare.value = row to col
-        _vaildMoves.value = MoveValidator.getValidMoves(piece,state.board)
+        val lastMove = state.moveHistory.lastOrNull()
+        _vaildMoves.value = MoveValidator.getValidMoves(piece,state.board,lastMove)
 
     }
     // ─────────────────────────────────────────────
     // 執行移動，更新 board + 換手
     // ─────────────────────────────────────────────
     private fun applyMove(move: Move,state: GameState){
-        val board = state.board.map { it.toMutableStateList() }.toMutableStateList()
-        val movingPiece = board[move.fromRow][move.fromCol]!!
+        // 使用 CheckDetector.applyMoveBoard 統一處理（含易位、過路兵）
+        val newBoard = CheckDetector.applyMoveBoard(state.board,move)
 
-        val updatedPiece = movingPiece.copy(
-            row = move.toRow,
-            col = move.toCol,
-            hasMoved = true
-        )
-        board[move.fromRow][move.fromCol] = null
-        board[move.toRow][move.toCol] = updatedPiece
-
-        val newBoard = board.map{ it.toList() }
         if (move.isPromotion){
             _gameState.value = state.copy(
                 board = newBoard,
@@ -124,17 +119,14 @@ class GameViewModel : ViewModel() {
         }
 
         val nextTurn = state.currentTurn.opposite()
-        val inCheck = CheckDetector.isInCheck(newBoard,nextTurn)
-        val inCheckmate = CheckDetector.isCheckmate(newBoard,nextTurn)
-        val isStalemate = CheckDetector.isStalemate(newBoard,nextTurn)
-
+        val lastMove = move
         _gameState.value = state.copy(
             board = newBoard,
             currentTurn = nextTurn,
             moveHistory = state.moveHistory + move,
-            isCheck = inCheck,
-            isCheckmate = inCheckmate,
-            isStalemate = isStalemate
+            isCheck = CheckDetector.isInCheck(newBoard,nextTurn),
+            isCheckmate = CheckDetector.isCheckmate(newBoard,nextTurn,lastMove),
+            isStalemate = CheckDetector.isStalemate(newBoard,nextTurn,lastMove)
         )
         clearSelection()
     }
@@ -147,14 +139,14 @@ class GameViewModel : ViewModel() {
         val board = state.board.map { it.toMutableStateList() }.toMutableStateList()
         board[row][col] = pawn.copy(type = pieceType)
         val newBoard = board.map { it.toList() }
-
         val nextTurn = state.currentTurn.opposite()
+        val lastMove = state.moveHistory.lastOrNull()
         _gameState.value = state.copy(
             board = newBoard,
             currentTurn = nextTurn,
             isCheck = CheckDetector.isInCheck(newBoard, nextTurn),
-            isCheckmate = CheckDetector.isCheckmate(newBoard, nextTurn),
-            isStalemate = CheckDetector.isStalemate(newBoard, nextTurn)
+            isCheckmate = CheckDetector.isCheckmate(newBoard, nextTurn,lastMove),
+            isStalemate = CheckDetector.isStalemate(newBoard, nextTurn,lastMove)
         )
         _pendingPromotion.value = null
         clearSelection()
@@ -171,27 +163,47 @@ class GameViewModel : ViewModel() {
         val board = state.board.map { it.toMutableStateList() } .toMutableStateList()
 
         val movedPiece = board[lastMove.toRow][lastMove.toCol]!!
-        board[lastMove.toRow][lastMove.toCol] = lastMove.capturedPiece
+
+        board[lastMove.toRow][lastMove.toCol] = if(lastMove.isEnPassant) null else lastMove.capturedPiece
         board[lastMove.fromRow][lastMove.fromCol] = movedPiece.copy(
             row = lastMove.fromRow,
             col = lastMove.fromCol,
             hasMoved = lastMove.fromRow != (if (movedPiece.color == PieceColor.WHITE)6 else 1)
         )
+        // 過路兵：把被吃的兵放回來
+        if (lastMove.isEnPassant && lastMove.capturedPiece != null) {
+            board[lastMove.fromRow][lastMove.toCol] = lastMove.capturedPiece
+        }
 
-        val newHistory = state.moveHistory.dropLast(1)
+        // 王車易位：把 Rook 移回去
+        if (lastMove.isCastling) {
+            val row = lastMove.fromRow
+            if (lastMove.toCol == 6) {
+                val rook = board[row][5]!!
+                board[row][5] = null
+                board[row][7] = rook.copy(col = 7, hasMoved = false)
+            } else if (lastMove.toCol == 2) {
+                val rook = board[row][3]!!
+                board[row][3] = null
+                board[row][0] = rook.copy(col = 0, hasMoved = false)
+            }
+        }
+
         val newBoard = board.map{it.toList()}
         val prevTurn = state.currentTurn.opposite()
-        val inCheck = CheckDetector.isInCheck(newBoard,prevTurn)
+        val prevLastMove = state.moveHistory.dropLast(1).lastOrNull()
 
         _gameState.value = state.copy(
             board = newBoard,
             currentTurn = prevTurn,
-            moveHistory = newHistory,
-            isCheck = inCheck,
+            moveHistory = state.moveHistory.dropLast(1),
+            isCheck = CheckDetector.isInCheck(newBoard, prevTurn),
             isCheckmate = false,
-            isStalemate = false
+            isStalemate = false,
+            isTimeout=false
         )
         clearSelection()
+        if (state.isTimeout) startTimer()
     }
     // ─────────────────────────────────────────────
     // 重新開始
@@ -199,6 +211,7 @@ class GameViewModel : ViewModel() {
     fun resetGame(){
         _gameState.value = GameState(board= initialBoard())
         clearSelection()
+        _pendingPromotion.value = null
         startTimer()
     }
     // ─────────────────────────────────────────────
@@ -235,8 +248,8 @@ fun initialBoard(): List<List<Piece?>>{
     }
 
     // ↓ 測試用：把 col=4 的白兵移到 row=1（距底行一步）
-    board[6][4] = null
-    board[1][4] = Piece(PieceType.PAWN, PieceColor.WHITE, 1, 4, hasMoved = true)
+//    board[6][4] = null
+//    board[1][4] = Piece(PieceType.PAWN, PieceColor.WHITE, 1, 4, hasMoved = true)
 
     return board.map { it.toList() }
 }

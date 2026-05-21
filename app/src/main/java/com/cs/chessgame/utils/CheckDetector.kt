@@ -4,6 +4,10 @@ import com.cs.chessgame.model.Move
 import com.cs.chessgame.model.Piece
 import com.cs.chessgame.model.PieceColor
 import com.cs.chessgame.model.PieceType
+import com.cs.chessgame.utils.CheckDetector.filterLegalMoves
+import com.cs.chessgame.utils.CheckDetector.isInCheck
+
+
 
 object CheckDetector {
     /* 模擬移動後，回傳新棋盤（不改動原始state）*/
@@ -17,6 +21,23 @@ object CheckDetector {
         b[move.toRow][move.toCol] = piece.copy(
             row = move.toRow,col = move.toCol,hasMoved = true
         )
+        //王車易位
+        if (move.isCastling){
+            val row = move.fromRow
+            if (move.toCol == 6){ //短易位
+                val rook = b[row][7]!!
+                b[row][7] = null
+                b[row][5] = rook.copy(col=5, hasMoved = true)
+            }else if (move.toCol == 2){
+                val rook = b[row][0]!!
+                b[row][0] = null
+                b[row][3] = rook.copy(col = 3, hasMoved = true)
+            }
+        }
+        // 過路兵：移除被吃的兵（在同行不同格）
+        if (move.isEnPassant) {
+            b[move.fromRow][move.toCol] = null
+        }
         return b.map { it.toList() }
     }
 
@@ -30,8 +51,8 @@ object CheckDetector {
         for (r in 0..7) for (c in 0..7){
             val piece = board[r][c] ?: continue
             if (piece.color != attackerColor) continue
-            val rawMoves = MoveValidator.getRawMoves(piece, board)
-            if (rawMoves.any{it.toRow == row && it.toCol == col}) return true
+            if (MoveValidator.getRawMovesNoKingCastle(piece,board)
+                    .any{it.toRow == row && it.toCol == col }) return true
         }
         return false
     }
@@ -51,23 +72,23 @@ object CheckDetector {
     /* 過濾掉會讓己方暴露 King 的舉動 */
     fun filterLegalMoves(
         piece: Piece,
-        board: List<List<Piece?>>
-    ): List<Move>{
-        return MoveValidator.getRawMoves(piece,board)
+        board: List<List<Piece?>>,
+        lastMove: Move? = null
+    ): List<Move> =MoveValidator.getRawMoves(piece,board,lastMove)
             .filter { isMoveLegal(board,it,piece.color) }
-    }
-    fun isCheckmate(board: List<List<Piece?>>, color: PieceColor): Boolean {
+
+    fun isCheckmate(board: List<List<Piece?>>, color: PieceColor,lastMove: Move? = null): Boolean {
         if (!isInCheck(board, color)) return false
         return board.flatten().filterNotNull()
             .filter { it.color == color }
-            .all { filterLegalMoves(it, board).isEmpty() }
+            .all { filterLegalMoves(it, board,lastMove).isEmpty() }
     }
-    fun isStalemate(board: List<List<Piece?>>,color: PieceColor): Boolean{
+    fun isStalemate(board: List<List<Piece?>>,color: PieceColor,lastMove: Move? = null): Boolean{
         if(isInCheck(board,color))return false
         return board.flatten()
             .filterNotNull()
             .filter { it.color == color }
-            .flatMap { MoveValidator.getValidMoves(it,board) }
+            .flatMap { filterLegalMoves(it,board,lastMove) }
             .isEmpty()
     }
 }

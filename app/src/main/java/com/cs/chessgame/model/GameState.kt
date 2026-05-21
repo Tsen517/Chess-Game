@@ -7,6 +7,7 @@ data class GameState(
     val isCheck: Boolean = false,
     val isCheckmate: Boolean = false,
     val isStalemate: Boolean = false,
+    val isTimeout: Boolean = false,
     val whiteTimeSeconds: Int = 600,
     val blackTimeSeconds: Int = 600
 )

@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.sp
 import com.cs.chessgame.model.PieceColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Text
-
+import com.cs.chessgame.ui.theme.LocalBoardColors
+import com.cs.chessgame.ui.theme.PrimaryAccent
+import com.cs.chessgame.ui.theme.OnPrimary
 
 @Composable
 fun GameOverlay(
@@ -30,6 +32,7 @@ fun GameOverlay(
 
     val loser = currentTurn
     val winner = currentTurn.opposite()
+    val boardColors = LocalBoardColors.current
 
     Box(
         contentAlignment = Alignment.Center,
@@ -39,7 +42,7 @@ fun GameOverlay(
     ) {
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF727294)),
+            colors = CardDefaults.cardColors(containerColor = boardColors.surface),
             elevation = CardDefaults.cardElevation(12.dp),
             modifier = Modifier.padding(horizontal = 40.dp)
         ) {
@@ -73,14 +76,14 @@ fun GameOverlay(
                         else        -> "雙方平手"
                     },
                     fontSize = 18.sp,
-                    color = Color(0xFFB0B0C0)
+                    color = boardColors.onSurface.copy(alpha = 0.6f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Button(
                     onClick = onRestart,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50)
+                        containerColor = PrimaryAccent
                 ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -90,7 +93,7 @@ fun GameOverlay(
                         text = "重新開始",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = OnPrimary
                     )
                 }
             }

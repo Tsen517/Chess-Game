@@ -1,6 +1,6 @@
 # ♟ Android Chess Game
 
-Kotlin + Jetpack Compose · 雙人本地對戰 · 3 週衝刺專題
+Kotlin + Jetpack Compose · 雙人本地對戰 
 
 ---
 
@@ -83,7 +83,7 @@ com.cs.chessgame
 | 成員 | 負責項目 |
 |------|---------|
 | A（邏輯工程師） | MoveValidator、GameState、悔棋、計時器邏輯 |
-| B（UI 工程師） | ChessBoardCanvas、動畫、主題設計、音效整合 |
+| B（UI 工程師） | ChessBoardCanvas、主題設計 |
 | 共同 | Git flow、週末整合測試、期末簡報 |
 
 ---
